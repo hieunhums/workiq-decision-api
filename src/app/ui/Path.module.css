@@ -1,0 +1,215 @@
+/* The choices behind one lookup, drawn left to right and wrapping on narrow
+   screens. Every lit colour comes from --lane, set globally by data-depth. */
+
+.path {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  font-size: 12px;
+}
+
+.stage {
+  display: flex;
+  align-items: flex-end;
+  animation: arrive 260ms ease-out both;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  margin: 0;
+  color: var(--faint);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.note {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--muted);
+  font-family: var(--mono);
+  white-space: nowrap;
+  transition:
+    opacity 300ms ease,
+    color 300ms ease,
+    border-color 300ms ease,
+    background-color 300ms ease;
+}
+
+.tag {
+  color: var(--faint);
+  font-style: normal;
+  font-size: 11px;
+}
+
+.share {
+  color: var(--faint);
+  font-size: 11px;
+}
+
+/* Open choice: each option lights in turn, like a needle sweeping. */
+.chip[data-scan="true"] {
+  animation: scan 1.2s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 180ms);
+}
+
+/* The pick locks in its lane colour with a small pop. */
+.chip[data-on="true"] {
+  border-color: var(--lane, var(--accent));
+  background: color-mix(in srgb, var(--lane, var(--accent)) 16%, var(--raised));
+  color: var(--text);
+  animation: lock 380ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.chip[data-on="true"] .tag,
+.chip[data-on="true"] .share {
+  color: color-mix(in srgb, var(--lane, var(--accent)) 70%, var(--text));
+}
+
+.chip[data-on="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 var(--lane, var(--accent));
+  animation: ring 700ms ease-out both;
+  pointer-events: none;
+}
+
+/* Options not taken stay visible, since what was passed over is the point. */
+.chip[data-off="true"] {
+  opacity: 0.38;
+}
+
+.link {
+  position: relative;
+  flex: none;
+  width: 26px;
+  height: 2px;
+  margin: 0 6px 12px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+/* While the next stage is waited on, a pulse runs along the wire. */
+.link[data-busy="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: inherit;
+  background: var(--lane, var(--accent));
+  animation: flow 900ms linear infinite;
+}
+
+.failed {
+  align-self: center;
+  margin: 17px 0 0 8px;
+  color: var(--danger);
+  font-family: var(--mono);
+}
+
+@keyframes scan {
+  0%,
+  60%,
+  100% {
+    border-color: var(--line);
+    color: var(--muted);
+    background: var(--raised);
+  }
+  25% {
+    border-color: var(--lane, var(--accent));
+    color: var(--text);
+    background: color-mix(in srgb, var(--lane, var(--accent)) 12%, var(--raised));
+  }
+}
+
+@keyframes lock {
+  0% {
+    transform: scale(0.92);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--lane, var(--accent)) 60%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+@keyframes flow {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(260%);
+  }
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage,
+  .chip,
+  .chip::after,
+  .link::after {
+    animation: none !important;
+  }
+  .chip[data-scan="true"] {
+    border-style: dashed;
+  }
+}

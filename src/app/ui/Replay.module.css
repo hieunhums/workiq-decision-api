@@ -1,0 +1,269 @@
+/* One lookup's choices, exploded into columns and replayed. Lit colours come
+   from --lane, set globally by data-depth. */
+
+.replay {
+  margin: 0 0 8px;
+  padding: 20px 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%),
+    var(--bg);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.kicker {
+  color: var(--faint);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.again {
+  flex: none;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.again:hover { border-color: var(--accent); }
+
+.columns {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(170px, 1fr);
+  gap: 0 44px;
+  overflow-x: auto;
+  padding: 4px 8px 8px;
+  margin: 0 -8px;
+}
+
+.column {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+  transition: opacity 300ms ease;
+}
+.column[data-state="waiting"] { opacity: 0.35; }
+
+.who {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.took {
+  color: var(--muted);
+  font: 400 11.5px var(--mono);
+  animation: fade 300ms ease both;
+}
+
+.what {
+  margin: 2px 0 12px;
+  color: var(--faint);
+  font-size: 11.5px;
+}
+
+/* The link in from the previous column. A pulse runs while this one scans. */
+.wire {
+  position: absolute;
+  top: 58px;
+  left: -40px;
+  width: 36px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+.wire[data-state="locked"] { background: var(--muted); }
+.wire[data-state="scanning"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 45%;
+  background: var(--accent);
+  animation: flow 800ms linear infinite;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.options[data-many="true"] {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+}
+
+/* Every option starts stacked on the wire and bursts out to its place. */
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--raised);
+  color: var(--muted);
+  font: 12.5px var(--mono);
+  animation: burst 520ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+  transition:
+    opacity 350ms ease,
+    color 350ms ease,
+    border-color 350ms ease,
+    background-color 350ms ease,
+    transform 350ms ease;
+}
+
+.column[data-state="scanning"] .option {
+  animation:
+    burst 520ms cubic-bezier(0.2, 1.3, 0.4, 1) both,
+    scan 1.1s ease-in-out 520ms infinite;
+  animation-delay: calc(var(--i, 0) * 45ms), calc(520ms + var(--i, 0) * 140ms);
+}
+
+.option[data-on="true"] {
+  border-color: var(--lane, var(--accent));
+  background: color-mix(in srgb, var(--lane, var(--accent)) 18%, var(--raised));
+  color: var(--text);
+  box-shadow: 0 0 22px -6px var(--lane, var(--accent));
+  transform: scale(1.03);
+  animation: lock 420ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.option[data-off="true"] {
+  opacity: 0.32;
+  transform: scale(0.97);
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.name em {
+  margin-left: auto;
+  color: var(--faint);
+  font-style: normal;
+  font-size: 11px;
+}
+.option[data-on="true"] .name em {
+  color: color-mix(in srgb, var(--lane, var(--accent)) 70%, var(--text));
+}
+
+.dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--lane, var(--muted));
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.track {
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--line);
+  overflow: hidden;
+}
+.track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--lane, var(--accent));
+  transition: width 700ms cubic-bezier(0.2, 0.9, 0.3, 1) 150ms;
+}
+.bar em {
+  min-width: 30px;
+  text-align: right;
+  color: var(--faint);
+  font-style: normal;
+  font-size: 10.5px;
+}
+
+@keyframes burst {
+  0% {
+    opacity: 0;
+    transform: translate(-34px, calc((var(--n, 1) / 2 - var(--i, 0)) * 26px)) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes scan {
+  0%, 55%, 100% { border-color: var(--line); color: var(--muted); }
+  22% {
+    border-color: var(--lane, var(--accent));
+    color: var(--text);
+    background: color-mix(in srgb, var(--lane, var(--accent)) 12%, var(--raised));
+  }
+}
+
+@keyframes lock {
+  0% { transform: scale(0.9); }
+  60% { transform: scale(1.09); }
+  100% { transform: scale(1.03); }
+}
+
+@keyframes flow {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 720px) {
+  .columns {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    gap: 22px;
+  }
+  .wire { display: none; }
+  .column { min-height: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .option,
+  .column[data-state="scanning"] .option,
+  .wire::after {
+    animation: none !important;
+  }
+}

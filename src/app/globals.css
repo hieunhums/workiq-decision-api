@@ -1,0 +1,67 @@
+/*
+ * Dark, always. This is the descendant of a panel that hung under a laptop
+ * notch, and following the system into light mode made it read like a form
+ * rather than an instrument.
+ */
+:root {
+  --bg: #0e1013;
+  --surface: #16191e;
+  --raised: #1c2027;
+  --line: #262b33;
+  --text: #e8eaed;
+  --muted: #949aa4;
+  --faint: #6b7280;
+  --accent: #5b8dff;
+  --danger: #e06666;
+
+  /*
+   * The lanes, and the only colours that carry meaning here. Green is a
+   * record read at about a second, blue a scoped search at about ten, orange a
+   * composed answer at about fifty. Teal is the public web, under a second.
+   * Reading a card should tell you what the question cost before you read a
+   * word of it.
+   */
+  --record: #4ec98a;
+  --search: #5b8dff;
+  --reasoned: #e0a33e;
+  --web: #3fc1c9;
+  --picks: #b38cf5;
+
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-size: 14px;
+}
+
+button, input, select { font-family: inherit; }
+
+/* Times and percentages sit in columns and are compared against each other, so
+   they must not reflow as the digits change. */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/*
+ * One rule sets --lane from data-depth, and everything that shows a cost reads
+ * it: a card's edge, a receipt's dot, a timeline's bars.
+ */
+[data-depth="record"] { --lane: var(--record); }
+[data-depth="search"] { --lane: var(--search); }
+[data-depth="reasoned"] { --lane: var(--reasoned); }
+[data-depth="web"] { --lane: var(--web); }
+[data-depth="picks"] { --lane: var(--picks); }
+[data-depth="auto"],
+[data-depth="unknown"],
+[data-depth="none"] { --lane: var(--muted); }
+
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

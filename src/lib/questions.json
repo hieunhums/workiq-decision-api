@@ -1,0 +1,272 @@
+[
+  {
+    "topic": "Own profile",
+    "about": "people",
+    "depth": "record",
+    "target": "me",
+    "questions": [
+      "What is my job title?",
+      "Which office am I in?",
+      "What department am I in?",
+      "Show me my own profile",
+      "What is my work email address?"
+    ]
+  },
+  {
+    "topic": "Manager",
+    "about": "people",
+    "depth": "record",
+    "target": "manager",
+    "questions": [
+      "Who is my manager?",
+      "Who do I report to?",
+      "What is my boss's email address?",
+      "Who signs off my work?",
+      "What is my manager's job title?"
+    ]
+  },
+  {
+    "topic": "Direct reports",
+    "about": "people",
+    "depth": "record",
+    "target": "directReports",
+    "questions": [
+      "Who reports to me?",
+      "List my direct reports",
+      "How many people are on my team?",
+      "Who are my reports and what are their titles?",
+      "Do I have anyone reporting to me?"
+    ]
+  },
+  {
+    "topic": "Colleagues",
+    "about": "people",
+    "depth": "record",
+    "target": "people",
+    "questions": [
+      "Who do I work with most?",
+      "List the colleagues I collaborate with",
+      "Who are my closest coworkers?",
+      "Show me the people I interact with often",
+      "Which people come up most in my work?"
+    ]
+  },
+  {
+    "topic": "Calendar",
+    "about": "time",
+    "depth": "record",
+    "target": "events",
+    "questions": [
+      "What meetings do I have today?",
+      "What is on my calendar this week?",
+      "When is my next meeting?",
+      "Do I have anything scheduled tomorrow afternoon?",
+      "What is my schedule?",
+      "Who is invited to my upcoming meetings?"
+    ]
+  },
+  {
+    "topic": "Mail",
+    "about": "messages",
+    "depth": "record",
+    "target": "messages",
+    "questions": [
+      "What is in my mailbox?",
+      "Show me my recent emails",
+      "List the last messages I received",
+      "Who has emailed me lately?",
+      "What are the subjects of my latest mail?"
+    ]
+  },
+  {
+    "topic": "Unread mail",
+    "about": "messages",
+    "depth": "record",
+    "target": "unread",
+    "questions": [
+      "What unread mail is waiting for me?",
+      "Do I have any unread emails?",
+      "Show me what is new in my inbox",
+      "How many messages have I not read yet?",
+      "What still needs my attention in the inbox?"
+    ]
+  },
+  {
+    "topic": "Chats",
+    "about": "messages",
+    "depth": "record",
+    "target": "chats",
+    "questions": [
+      "What chats am I in?",
+      "List my Teams conversations",
+      "Which chat threads do I have open?",
+      "What was the last thing said in my chats?"
+    ]
+  },
+  {
+    "topic": "Direct messages",
+    "about": "messages",
+    "depth": "record",
+    "target": "direct",
+    "questions": [
+      "What is my latest chat with Megan Bowen?",
+      "What is my latest chat with Alex?",
+      "Who am I chatting with directly?",
+      "What was the last thing Diego sent me directly?",
+      "Show me my direct messages"
+    ]
+  },
+  {
+    "topic": "Presence",
+    "about": "time",
+    "depth": "record",
+    "target": "presence",
+    "questions": [
+      "Am I available right now?",
+      "Do I show as busy at the moment?",
+      "What does my availability look like to others?",
+      "Am I online?"
+    ]
+  },
+  {
+    "topic": "Tasks",
+    "about": "my work",
+    "depth": "record",
+    "target": "tasks",
+    "questions": [
+      "What tasks are assigned to me?",
+      "List my to do items",
+      "What is due soon on my task list?",
+      "How far along are my open tasks?",
+      "Do I have anything overdue?"
+    ]
+  },
+  {
+    "topic": "Recent documents",
+    "about": "my work",
+    "depth": "record",
+    "target": "files",
+    "questions": [
+      "What documents did I work on recently?",
+      "Which files have I opened lately?",
+      "Show me my recent files",
+      "What was I last editing?",
+      "What have I been working on in OneDrive?"
+    ]
+  },
+  {
+    "topic": "Shared with me",
+    "about": "my work",
+    "depth": "record",
+    "target": "shared",
+    "questions": [
+      "What files has someone shared with me?",
+      "Which documents were shared to me recently?",
+      "Show me files other people sent my way",
+      "What has been shared with me this week?"
+    ]
+  },
+  {
+    "topic": "Teams joined",
+    "about": "membership",
+    "depth": "record",
+    "target": "teams",
+    "questions": [
+      "Which teams have I joined?",
+      "List the Teams I am a member of",
+      "What teams am I part of?",
+      "Am I in the engineering team?"
+    ]
+  },
+  {
+    "topic": "Groups",
+    "about": "membership",
+    "depth": "record",
+    "target": "groups",
+    "questions": [
+      "Which groups do I belong to?",
+      "What distribution lists am I on?",
+      "List my group memberships",
+      "Which mailing lists include me?"
+    ]
+  },
+  {
+    "topic": "Search mail",
+    "about": "search",
+    "depth": "search",
+    "target": "email",
+    "questions": [
+      "What did Adele email me about the Contoso proposal deadline?",
+      "Find the email thread about the Q3 travel budget approval",
+      "What did I reply to Fabrikam about the license quote?",
+      "Was anything mailed about the security review for the Northwind pilot?",
+      "Find the mail with the signed Litware statement of work attached"
+    ]
+  },
+  {
+    "topic": "Search meetings",
+    "about": "search",
+    "depth": "search",
+    "target": "meetings",
+    "questions": [
+      "What was decided in the sprint planning meeting?",
+      "What did we agree in last week's Northwind design review?",
+      "Summarise the notes from the architecture meeting",
+      "What action items came out of this morning's standup?",
+      "What did we say about the open engineer role in my meetings?"
+    ]
+  },
+  {
+    "topic": "Search files",
+    "about": "search",
+    "depth": "search",
+    "target": "files",
+    "questions": [
+      "Find the design doc for the Contoso single sign-on rollout",
+      "Where is the solution architecture deck for Woodgrove Bank?",
+      "What does the new hire onboarding guide say about laptop setup?",
+      "Find the latest product roadmap for next year",
+      "Which document has the runbook for the Northwind cutover?"
+    ]
+  },
+  {
+    "topic": "Search Teams messages",
+    "about": "search",
+    "depth": "search",
+    "target": "teams",
+    "questions": [
+      "What did the team post in Teams about the March release?",
+      "Find the chat thread where Tuesday's outage was discussed",
+      "What was said in the marketing channel about the new logo?",
+      "Has anyone messaged about the Tailspin data migration?",
+      "What did people say in chat about Friday's customer demo?"
+    ]
+  },
+  {
+    "topic": "Find an expert",
+    "about": "search",
+    "depth": "search",
+    "target": "people",
+    "questions": [
+      "Who is the expert on TypeSpec?",
+      "Who owns the billing system?",
+      "Who on my team has Kubernetes listed as a skill?",
+      "Who knows Power BI well enough to help with a dashboard?",
+      "Who worked on the Tailspin mobile app project?"
+    ]
+  },
+  {
+    "topic": "Needs composing",
+    "about": "judgement",
+    "depth": "reasoned",
+    "target": null,
+    "questions": [
+      "What are my priorities this quarter?",
+      "What should I focus on next week?",
+      "Give me a summary of everything I missed while on leave",
+      "Based on my manager's feedback, what should I improve?",
+      "How is the project going overall?",
+      "What should I prepare before my next one to one?"
+    ]
+  }
+]
