@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decision API routing Work IQ</title>
+<style>
+  body { margin:0; background:#eef1f6; color:#0f172a; font:16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+  .wrap { max-width:1200px; margin:0 auto; padding:20px; }
+  canvas { width:100%; height:auto; display:block; border-radius:18px; background:#fbfcfe; box-shadow:0 1px 3px rgba(15,23,42,.08), 0 12px 40px rgba(15,23,42,.08); cursor:pointer; }
+  .foot { display:flex; justify-content:space-between; gap:16px; color:#64748b; font-size:14px; margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <canvas id="c" width="1200" height="740" aria-label="Animation: a Decision API routes Work IQ questions to the right tool, path and source"></canvas>
+  <div class="foot"><span>Real questions and real routing from my own Work IQ history. Names changed. After fetch or retrieve, Jev checks the result; when ask can add more, Jev passes the question on to it. Shown: all 14 Work IQ tools, 15 Graph records and 5 search sources. The motion is paced so you can follow it; the timeline shows real seconds, to scale.</span><span style="white-space:nowrap">Click to skip</span></div>
+</div>
+<script>
+const SCENES = [
+  { q:"What unread mail is waiting for me?", reach:{record:.99, search:0, reasoned:0, none:.01},
+    src:{Mail:.98, Files:.16, Meetings:.02, People:.03, Teams:.02}, tool:"fetch", targets:["unread"],
+    check:{score:95, pass:true}, total:6.4,
+    chips:[["Jev reach",.30],["fetch",1.25],["Jev check",.32],["write",4.49]] },
+  { q:"Who do I work with most?", reach:{record:.66, search:.02, reasoned:.12, none:.20},
+    src:null, tool:"fetch", targets:["people"], check:{score:90, pass:true}, total:5.2, totalNote:"to checked records",
+    chips:[["Jev reach",.37],["fetch",4.52],["Jev check",.29]] },
+  { q:"What did the team post in Teams about the release?", reach:{record:.03, search:.87, reasoned:.02, none:.08},
+    src:{Mail:.02, Files:.03, Meetings:.03, People:.03, Teams:.99}, tool:"retrieve", targets:["Teams"],
+    check:{score:95, pass:true}, total:28.2,
+    chips:[["Jev reach",.38],["retrieve",6.96],["Jev check",.29],["write",20.54]] },
+  { q:"How did my Fabrikam meeting go?", reach:{record:.13, search:.04, reasoned:.68, none:.15},
+    src:{Mail:.03, Files:.03, Meetings:.98, People:.06, Teams:.03}, tool:"ask", targets:["Meetings"],
+    check:null, total:54.1,
+    chips:[["Jev reach",.40],["ask",53.62]] },
+  { q:"Find my Northwind meeting transcript summary", reach:{record:.04, search:.94, reasoned:0, none:.02},
+    src:{Mail:.04, Files:.76, Meetings:.99, People:.05, Teams:.04}, tool:"retrieve", targets:["Meetings","Files"],
+    check:{score:39, pass:false}, total:40.8,
+    chips:[["Jev reach",.37],["retrieve",7.68],["Jev check",.34],["ask",32.34]] },
+];
+
+const W = 1200, H = 740;
+const COL = { q:"#334155", core:"#7c3aed", fetch:"#0284c7", retrieve:"#0d9488", ask:"#d97706",
+              ok:"#16a34a", fail:"#d97706", text:"#0f172a", sub:"#64748b", line:"#dde3ee", pill:"#fff" };
+const TOOLS = {
+  fetch:    { x:640, y:330, label:"fetch",    sub:"read one record",   c:COL.fetch,    reach:"record" },
+  retrieve: { x:640, y:445, label:"retrieve", sub:"search sources",    c:COL.retrieve, reach:"search" },
+  ask:      { x:640, y:560, label:"ask",      sub:"compose an answer", c:COL.ask,      reach:"reasoned" },
+};
+const RECORDS = [["unread","/me/mailFolders/inbox"],["messages","/me/messages"],["events","/me/events"],
+                 ["people","/me/people"],["chats","/me/chats"],["direct","/me/chats (1:1)"],["manager","/me/manager"],["me","/me"],
+                 ["directReports","/me/directReports"],["tasks","/me/planner/tasks"],["files","/me/insights/used"],
+                 ["shared","/me/insights/shared"],["teams","/me/joinedTeams"],["groups","/me/memberOf"],["presence","/me/presence"]];
+const EXTRA = ["create_entity","update_entity","delete_entity","do_action","call_function","fetch_blob",
+               "search_paths","get_schema","list_agents","accept_eula","get_debug_link"];
+const SOURCES = ["Mail","Meetings","Files","Teams","People"];
+const N = { q:{x:92,y:380}, core:{x:330,y:380}, check:{x:1112,y:300}, answer:{x:1112,y:480} };
+EXTRA.forEach((id, i) => N[id] = { x: i < 6 ? 584 : 696, y: 160 + (i % 6) * 21 });
+RECORDS.forEach(([id], i) => N[id] = { x:905, y:150 + i * 22, hw:85 });
+SOURCES.forEach((id, i) => N[id] = { x:905, y:500 + i * 26, hw:85 });
+Object.entries(TOOLS).forEach(([k, t]) => N[k] = t);
+const EDGE = { tool:85, target:100, small:62 };
+
+const cv = document.getElementById("c"), g = cv.getContext("2d");
+const dpr = Math.min(2, window.devicePixelRatio || 1);
+cv.width = W * dpr; cv.height = H * dpr; g.scale(dpr, dpr);
+
+let seed = 7;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+function ends(id, side) {
+  const n = N[id];
+  if (TOOLS[id]) return { x: n.x + (side === "out" ? EDGE.tool : -EDGE.tool), y: n.y };
+  if (RECORDS.some(r => r[0] === id) || SOURCES.includes(id)) { const hw = n.hw || EDGE.target; return { x: n.x + (side === "out" ? hw : -hw), y: n.y }; }
+  if (id === "core") return { x: n.x + (side === "out" ? 66 : -66), y: n.y };
+  if (id === "check" || id === "answer") return { x: n.x + (side === "out" ? 0 : -EDGE.small), y: n.y };
+  return { x: n.x + 18, y: n.y };
+}
+function curve(a, b, back) {
+  const p0 = ends(a, "out"), p3 = ends(b, "in");
+  if (back) {  // check -> ask fallback loops underneath
+    const s = N[a], e = N[b];
+    return [{ x:s.x - 22, y:s.y + 22 }, { x:1036, y:360 }, { x:1036, y:420 }, { x:1036, y:560 },
+            { x:1036, y:650 }, { x:1000, y:648 }, { x:900, y:648 },
+            { x:740, y:648 }, { x:e.x, y:620 }, { x:e.x, y:e.y + 29 }];
+  }
+  if (a === "check" && b === "answer") return [{ x:N.check.x, y:N.check.y + 30 }, { x:N.check.x, y:390 }, { x:N.answer.x, y:400 }, { x:N.answer.x, y:N.answer.y - 30 }];
+  const dx = (p3.x - p0.x) / 2;
+  return [p0, { x:p0.x + dx, y:p0.y }, { x:p3.x - dx, y:p3.y }, p3];
+}
+function bez1(P, t) {
+  const u = 1 - t;
+  return { x: u*u*u*P[0].x + 3*u*u*t*P[1].x + 3*u*t*t*P[2].x + t*t*t*P[3].x,
+           y: u*u*u*P[0].y + 3*u*u*t*P[1].y + 3*u*t*t*P[2].y + t*t*t*P[3].y };
+}
+// P may chain several cubics (4, 7, 10... points); t is spread by segment length
+function bez(P, t) {
+  if (P.length === 4) return bez1(P, t);
+  if (!P.cum) {
+    const segs = [], cum = [0];
+    for (let i = 0; i + 3 < P.length; i += 3) {
+      const s = P.slice(i, i + 4); let L = 0, pr = s[0];
+      for (let k = 1; k <= 16; k++) { const q = bez1(s, k / 16); L += Math.hypot(q.x - pr.x, q.y - pr.y); pr = q; }
+      segs.push(s); cum.push(cum[cum.length - 1] + L);
+    }
+    P.segs = segs; P.cum = cum.map(c => c / cum[cum.length - 1]);
+  }
+  t = Math.max(0, Math.min(1, t));
+  let i = 0; while (i < P.segs.length - 1 && t > P.cum[i + 1]) i++;
+  return bez1(P.segs[i], (t - P.cum[i]) / (P.cum[i + 1] - P.cum[i]));
+}
+function trace(P) {
+  g.beginPath(); g.moveTo(P[0].x, P[0].y);
+  for (let i = 1; i + 2 < P.length; i += 3) g.bezierCurveTo(P[i].x, P[i].y, P[i + 1].x, P[i + 1].y, P[i + 2].x, P[i + 2].y);
+}
+
+function plan(S) {
+  const E = [], add = (a, b, c, t0, t1, rate, back) => E.push({ a, b, c, t0, t1, rate: (a === "core" && b !== S.tool) ? 0 : 3 / (t1 - t0), back, main: !(a === "core" && b !== S.tool), P: curve(a, b, back), acc: .5 });
+  add("q", "core", COL.q, .25, 1.7, 55);
+  const rs = { fetch:S.reach.record, retrieve:S.reach.search, ask:S.reach.reasoned };
+  for (const k in TOOLS) add("core", k, TOOLS[k].c, 1.3, 2.7, 3 + 75 * rs[k] + (k === S.tool ? 20 : 0));
+  const tc = TOOLS[S.tool].c;
+  S.targets.forEach(t => add(S.tool, t, tc, 2.5, 4.0, 60 / S.targets.length));
+  let end;
+  if (S.check) {
+    S.targets.forEach(t => add(t, "check", tc, 3.8, 5.1, 50 / S.targets.length));
+    if (S.check.pass) { add("check", "answer", COL.ok, 5.0, 6.4, 55); end = 6.4; }
+    else {
+      add("check", "ask", COL.fail, 5.0, 6.1, 55, true);
+      S.targets.forEach(t => add("ask", t, COL.ask, 6.0, 7.2, 50 / S.targets.length));
+      S.targets.forEach(t => add(t, "answer", COL.ask, 7.1, 8.4, 50 / S.targets.length));
+      end = 8.4;
+    }
+  } else { S.targets.forEach(t => add(t, "answer", tc, 3.8, 5.3, 55 / S.targets.length)); end = 5.3; }
+  return { E, end, dur: end + 2.6 };
+}
+
+const AMB = { acc:0, wires:[] };
+(() => { const w = (a, b, c) => AMB.wires.push({ P:curve(a, b), c });
+  w("q", "core", COL.q); for (const k in TOOLS) w("core", k, TOOLS[k].c);
+  RECORDS.forEach(([r]) => w("fetch", r, COL.fetch)); SOURCES.forEach(s => { w("retrieve", s, COL.retrieve); w("ask", s, COL.ask); }); })();
+let si = 0, st = 0, P = [], E = [], DUR = 0, END = 0, glow = {}, used = {};
+function startScene(i) {
+  si = (i + SCENES.length) % SCENES.length; st = 0; P = []; glow = {}; used = {};
+  const p = plan(SCENES[si]); E = p.E; DUR = p.dur; END = p.end;
+}
+
+function step(dt) {
+  st += dt;
+  for (const e of E) {
+    if (st < e.t0 || st > e.t1) continue;
+    if (e.main) { glow[e.a] = 1; glow[e.b] = Math.max(glow[e.b] || 0, .8); used[e.a] = used[e.b] = true; }
+    e.acc += e.rate * dt;
+    while (e.acc >= 1) {
+      e.acc -= 1;
+      P.push({ P:e.P, t:0, sp:.62 + rnd() * .08, c:e.c, hex:e.c, j:(rnd() - .5) * 14, ph:rnd() * 6.28, s:.55 + rnd() * .6 });
+    }
+  }
+  AMB.acc += 0;
+  while (AMB.acc >= 1) { AMB.acc -= 1; const w = AMB.wires[Math.floor(rnd() * AMB.wires.length)];
+    P.push({ P:w.P, t:0, sp:.22 + rnd() * .15, c:w.c, hex:w.c, j:0, ph:0, s:.4 + rnd() * .3, amb:true }); }
+  for (const p of P) p.t += p.sp * dt;
+  P = P.filter(p => p.t < 1 + tailOf(p.P));
+  for (const k in glow) glow[k] = Math.max(0, glow[k] - dt * 1.6);
+}
+
+const lerp = (a, b, t) => a + (b - a) * Math.max(0, Math.min(1, t));
+function rr(x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+function text(s, x, y, size, color, align = "left", weight = 500, font) {
+  g.font = `${weight} ${size}px ${font || '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif'}`;
+  g.fillStyle = color; g.textAlign = align; g.textBaseline = "middle"; g.fillText(s, x, y);
+}
+const mono = 'ui-monospace, SFMono-Regular, Menlo, monospace';
+
+function tint(c, a) { const n = parseInt(c.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+function tailOf(Pa) {
+  if (Pa.tt) return Pa.tt;
+  let L = 0, prev = bez(Pa, 0);
+  for (let i = 1; i <= 24; i++) { const q = bez(Pa, i / 24); L += Math.hypot(q.x - prev.x, q.y - prev.y); prev = q; }
+  return Pa.tt = Math.min(.6, 90 / Math.max(L, 1));
+}
+const INK = "#0f172a", SUB = "#64748b", IDLE = "#c3cbdb";
+
+function pill(id, w, h, label, sub, color, monoFont, fs = 14) {
+  const n = N[id], on = glow[id] || 0, u = used[id] ? .6 : 0, a = Math.max(on, u);
+  g.save();
+  if (a > 0) { g.shadowColor = tint(color, .45); g.shadowBlur = 18 * a; g.shadowOffsetY = 2; }
+  else { g.shadowColor = "rgba(15,23,42,.06)"; g.shadowBlur = 6; g.shadowOffsetY = 1; }
+  rr(n.x - w / 2, n.y - h / 2, w, h, h / 2.4);
+  g.fillStyle = "#fff"; g.fill(); g.restore();
+  if (a > 0) { rr(n.x - w / 2, n.y - h / 2, w, h, h / 2.4); g.fillStyle = tint(color, .1 * a); g.fill(); }
+  rr(n.x - w / 2, n.y - h / 2, w, h, h / 2.4);
+  g.lineWidth = a > 0 ? 2 : 1.2; g.strokeStyle = a > 0 ? color : IDLE; g.stroke();
+  if (sub) { text(label, n.x, n.y - 9, 19, a > 0 ? color : "#475569", "center", 700, mono); text(sub, n.x, n.y + 13, 13, SUB, "center"); }
+  else text(label, n.x, n.y + 1, fs, a > 0 ? INK : "#475569", "center", a > 0 ? 700 : 500, monoFont ? mono : undefined);
+}
+
+function bars(x, y, title, rows, t, color) {
+  text(title, x, y, 12, SUB, "left", 700);
+  rows.forEach(([lab, v, hi], i) => {
+    const yy = y + 24 + i * 22, w = 120 * lerp(0, v, t);
+    text(lab, x, yy, 13.5, hi ? INK : SUB, "left", hi ? 700 : 500);
+    rr(x + 82, yy - 4, 120, 8, 4); g.fillStyle = "#e7ebf3"; g.fill();
+    if (w > 0) { rr(x + 82, yy - 4, Math.max(w, 3), 8, 4); g.fillStyle = hi ? color : "#b6c0d4"; g.fill(); }
+    text(Math.round(lerp(0, v, t) * 100) + "%", x + 212, yy, 13, hi ? INK : SUB, "left", 600, mono);
+  });
+}
+
+function comet(p) {
+  const tt = tailOf(p.P), head = Math.min(p.t, 1), tail = Math.max(0, p.t - tt);
+  if (head <= tail) return;
+  const n = 14, pts = [];
+  for (let i = 0; i <= n; i++) pts.push(bez(p.P, tail + (head - tail) * i / n));
+  const k = p.amb ? .35 : 1, wmax = p.amb ? 1.6 : 3.2;
+  g.lineCap = "round";
+  for (let i = 1; i <= n; i++) {
+    const f = i / n;
+    g.strokeStyle = tint(p.hex, f * f * .9 * k); g.lineWidth = .6 + wmax * f;
+    g.beginPath(); g.moveTo(pts[i - 1].x, pts[i - 1].y); g.lineTo(pts[i].x, pts[i].y); g.stroke();
+  }
+  if (p.t <= 1) {
+    const h = pts[n];
+    if (!p.amb) { g.beginPath(); g.arc(h.x, h.y, 6.5, 0, 7); g.fillStyle = tint(p.hex, .14); g.fill(); }
+    g.beginPath(); g.arc(h.x, h.y, (p.amb ? 1.6 : 3.4), 0, 7); g.fillStyle = tint(p.hex, k); g.fill();
+  }
+}
+
+function draw() {
+  const S = SCENES[si];
+  g.clearRect(0, 0, W, H);
+  const bg = g.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, "#fbfcfe"); bg.addColorStop(1, "#f1f4f9");
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.fillStyle = "rgba(100,116,139,.12)";
+  for (let x = 20; x < W; x += 24) for (let y = 20; y < H; y += 24) g.fillRect(x, y, 1.2, 1.2);
+
+  const chars = Math.floor(lerp(0, S.q.length, st / 1.0));
+  text("\u201c" + S.q.slice(0, chars) + (chars < S.q.length ? "\u258f" : "\u201d"), 40, 56, 30, INK, "left", 700);
+  SCENES.forEach((_, i) => { g.beginPath(); g.arc(W - 40 - (SCENES.length - 1 - i) * 18, 56, 5, 0, 7); g.fillStyle = i === si ? INK : "#cbd5e1"; g.fill(); });
+
+  [["QUESTION", 92], ["DECISION API", 330], ["WORK IQ TOOLS (14)", 640], ["PATHS AND SOURCES", 905], ["CHECK", 1112]]
+    .forEach(([s, x]) => text(s, x, 104, 12, "#94a3b8", "center", 700));
+  text("Write, act and helper tools (11)", 640, 138, 12, "#94a3b8", "center", 600);
+  text("Graph records (15)", 905, N.unread.y - 19, 12, "#94a3b8", "center", 600);
+  text("Search sources (5)", 905, N.Mail.y - 21, 12, "#94a3b8", "center", 600);
+
+  g.strokeStyle = "#dde3ee"; g.lineWidth = 1.2;
+  const wire = (a, b) => { const c = curve(a, b); g.beginPath(); g.moveTo(c[0].x, c[0].y); g.bezierCurveTo(c[1].x, c[1].y, c[2].x, c[2].y, c[3].x, c[3].y); g.stroke(); };
+  wire("q", "core"); for (const k in TOOLS) wire("core", k);
+  RECORDS.forEach(([r]) => wire("fetch", r)); SOURCES.forEach(s => { wire("retrieve", s); wire("ask", s); });
+  for (const e of E) {
+    if (!e.main || st < e.t0) continue;
+    const k = Math.min(1, (st - e.t0) / .6);
+    g.save(); g.strokeStyle = tint(e.c, .45 * k); g.lineWidth = 2.4;
+    if (e.back) g.setLineDash([6, 6]);
+    trace(e.P); g.stroke(); g.restore();
+  }
+
+  // question node
+  g.beginPath(); g.arc(N.q.x, N.q.y, 18, 0, 7); g.fillStyle = INK; g.fill();
+  text("?", N.q.x, N.q.y + 1, 18, "#fff", "center", 700);
+
+  // decision core
+  const cg = Math.max(glow.core || 0, used.core ? .5 : .3), pulse = 1 + .03 * Math.sin(st * 6) * cg;
+  g.save(); g.shadowColor = tint(COL.core, .5); g.shadowBlur = 36 * cg;
+  g.beginPath(); g.arc(N.core.x, N.core.y, 64 * pulse, 0, 7); g.fillStyle = "#fff"; g.fill(); g.restore();
+  g.beginPath(); g.arc(N.core.x, N.core.y, 64 * pulse, 0, 7); g.fillStyle = tint(COL.core, .08); g.fill();
+  g.lineWidth = 2.5; g.strokeStyle = COL.core; g.stroke();
+  g.save(); g.translate(N.core.x, N.core.y); g.rotate(st * .8);
+  g.setLineDash([3, 9]); g.strokeStyle = tint(COL.core, .55); g.lineWidth = 1.5;
+  g.beginPath(); g.arc(0, 0, 78, 0, 7); g.stroke(); g.restore();
+  text("Jev", N.core.x, N.core.y - 10, 24, "#2e1065", "center", 800);
+  text("decision model", N.core.x, N.core.y + 16, 13, COL.core, "center", 600);
+
+  const bt = (st - 1.2) / 1.1;
+  const reachRows = [["Record", S.reach.record, S.tool === "fetch"], ["Search", S.reach.search, S.tool === "retrieve"],
+                     ["Compose", S.reach.reasoned, S.tool === "ask"], ["Other", S.reach.none, false]];
+  bars(205, 505, "REACH  \u00b7  which tool", reachRows, bt, TOOLS[S.tool].c);
+  if (S.src) bars(205, 150, "SCOPE  \u00b7  which source", SOURCES.map(s => [s, S.src[s], S.tool !== "fetch" && S.targets.includes(s)]), bt,
+                  S.tool === "fetch" ? "#b6c0d4" : TOOLS[S.tool].c);
+  else { text("SCOPE  \u00b7  which source", 205, 150, 12, SUB, "left", 700); text("not needed: a record has one home", 205, 176, 13.5, SUB); }
+  if (S.src && S.tool === "fetch") text("a record is read directly", 205, 290, 12.5, SUB);
+
+  // particles under the nodes they enter
+  for (const p of P) comet(p);
+
+  EXTRA.forEach(id => { const n = N[id];
+    rr(n.x - 53, n.y - 9.5, 106, 19, 8); g.fillStyle = "rgba(255,255,255,.7)"; g.fill();
+    g.lineWidth = 1; g.strokeStyle = "#cbd5e1"; g.stroke();
+    text(id, n.x, n.y + 1, 10.5, "#475569", "center", 500, mono); });
+  for (const k in TOOLS) pill(k, 170, 58, TOOLS[k].label, TOOLS[k].sub, TOOLS[k].c);
+  RECORDS.forEach(([id, lab]) => pill(id, 170, 19, lab, null, COL.fetch, true, 11));
+
+  SOURCES.forEach(id => pill(id, 170, 22, id, null, S.tool === "ask" || (S.check && !S.check.pass) ? COL.ask : COL.retrieve));
+
+  const ck = S.check, shown = ck && st > 5.0;
+  const gc = !ck ? IDLE : shown ? (ck.pass ? COL.ok : COL.fail) : "#94a3b8";
+  g.save(); g.translate(N.check.x, N.check.y); g.rotate(Math.PI / 4);
+  if (ck && (glow.check || shown)) { g.shadowColor = tint(gc, .5); g.shadowBlur = 18; }
+  rr(-28, -28, 56, 56, 10); g.fillStyle = "#fff"; g.fill(); g.restore();
+  g.save(); g.translate(N.check.x, N.check.y); g.rotate(Math.PI / 4);
+  rr(-28, -28, 56, 56, 10); if (shown) { g.fillStyle = tint(gc, .1); g.fill(); } g.lineWidth = 2; g.strokeStyle = gc; g.stroke(); g.restore();
+  text(ck ? (shown ? (ck.pass ? "\u2713" : "\u2192") : "?") : "\u2013", N.check.x, N.check.y + 1, 22, gc, "center", 800);
+  if (!ck) { text("skipped: ask is", N.check.x, N.check.y + 52, 13, SUB, "center"); text("already the last step", N.check.x, N.check.y + 70, 13, SUB, "center"); }
+  else if (!shown) { text("does the result", N.check.x, N.check.y + 52, 13, SUB, "center"); text("answer the question?", N.check.x, N.check.y + 70, 13, SUB, "center"); }
+  if (shown) {
+    rr(N.check.x - 62, N.check.y + 40, 124, 44, 10); g.fillStyle = "#f7f9fc"; g.fill();
+    text(`answered ${ck.score}%`, N.check.x, N.check.y + 52, 15, gc, "center", 700);
+    text(ck.pass ? "yes: write it up" : "next: ask composes", N.check.x, N.check.y + 72, 13, SUB, "center");
+  }
+
+  const done = st > END - .2, ac = S.check && !S.check.pass ? COL.ask : COL.ok;
+  g.save(); g.shadowColor = done ? tint(ac, .5) : "rgba(15,23,42,.06)"; g.shadowBlur = done ? 24 : 6;
+  rr(N.answer.x - 62, N.answer.y - 34, 124, 68, 16); g.fillStyle = "#fff"; g.fill(); g.restore();
+  rr(N.answer.x - 62, N.answer.y - 34, 124, 68, 16); if (done) { g.fillStyle = tint(ac, .1); g.fill(); }
+  g.lineWidth = 2; g.strokeStyle = done ? ac : IDLE; g.stroke();
+  text("answer", N.answer.x, N.answer.y - 13, 13, SUB, "center", 600);
+  text(done ? S.total.toFixed(1) + "s" : "\u2026", N.answer.x, N.answer.y + 12, 24, done ? INK : "#94a3b8", "center", 800, mono);
+  if (done) text(S.totalNote || "real total", N.answer.x, N.answer.y + 50, 12.5, SUB, "center");
+
+  const at = S.check ? (S.check.pass ? [1.3, 2.5, 5.0, 5.4] : [1.3, 2.5, 5.0, 6.0]) : [1.3, 2.5, 3.9];
+  const X0 = 170, X1 = W - 40, Y = 686, BH = 26;
+  const tot = S.chips.reduce((t, c) => t + c[1], 0), jev = S.chips.filter(c => c[0].startsWith("Jev")).reduce((t, c) => t + c[1], 0);
+  text("REAL TIME", 40, Y + 2, 12, "#94a3b8", "left", 700);
+  if (st > at[0]) {
+    text(`Jev: ${jev.toFixed(2)}s`, 40, Y + 21, 13, COL.core, "left", 700, mono);
+    text(`of ${S.total.toFixed(1)}s (${Math.max(1, Math.round(jev / S.total * 100))}%)`, 40, Y + 38, 12, SUB, "left", 500);
+  }
+  rr(X0, Y, X1 - X0, BH, 8); g.fillStyle = "#e9edf4"; g.fill();
+  let x = X0, lastAbove = -1e9;
+  S.chips.forEach(([lab, sec], i) => {
+    const full = Math.max(5, (X1 - X0) * sec / tot), k = Math.max(0, Math.min(1, (st - at[i]) / .5));
+    if (k <= 0) { x += full; return; }
+    const w = Math.max(3, full * k - 2), isJev = lab.startsWith("Jev");
+    const c = isJev ? (lab === "Jev check" && S.check && !S.check.pass ? COL.fail : COL.core)
+            : lab === "write" ? COL.ok : TOOLS[lab] ? TOOLS[lab].c : SUB;
+    rr(x, Y, w, BH, Math.min(8, w / 2)); g.fillStyle = tint(c, isJev ? .9 : .16); g.fill();
+    if (!isJev) { g.strokeStyle = tint(c, .7); g.lineWidth = 1.2; g.stroke(); }
+    const s2 = `${lab}  ${sec.toFixed(2)}s`;
+    g.font = `700 13px ${mono}`; const tw = g.measureText(s2).width;
+    if (k === 1 && tw + 20 < full) text(s2, x + 10, Y + BH / 2 + 1, 13, c, "left", 700, mono);
+    else if (k === 1) {
+      const lab2 = `${lab.replace("Jev ", "")} ${sec.toFixed(2)}s`;
+      g.font = `700 12px ${mono}`; const lw = g.measureText(lab2).width;
+      let lx = Math.max(X0, Math.min(X1 - lw, x + full / 2 - lw / 2));
+      if (lx < lastAbove + 8) lx = lastAbove + 8;
+      g.strokeStyle = tint(c, .6); g.lineWidth = 1; g.beginPath(); g.moveTo(x + full / 2, Y - 1); g.lineTo(x + full / 2, Y - 6); g.stroke();
+      text(lab2, lx, Y - 14, 12, c, "left", 700, mono); lastAbove = lx + lw;
+    }
+    x += full;
+  });
+}
+
+const qs = new URLSearchParams(location.search);
+if (qs.has("static")) {
+  startScene(+qs.get("static") || 0);
+  const T = qs.has("t") ? +qs.get("t") : END + .5;
+  while (st < T) step(1 / 60);
+  draw();
+} else {
+  startScene(0);
+  let last = performance.now();
+  (function loop(now) {
+    const dt = Math.min(.05, (now - last) / 1000); last = now;
+    step(dt);
+    if (st > DUR) startScene(si + 1);
+    draw();
+    requestAnimationFrame(loop);
+  })(last);
+  cv.addEventListener("click", () => startScene(si + 1));
+}
+</script>
+</body>
+</html>

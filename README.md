@@ -7,6 +7,12 @@ Talk to a realtime model, or type to a text model. Both hold two tools:
 - `search_web` takes a query the model writes and searches the public web
   through Microsoft Web IQ. Optional.
 
+![Jev, a Decision API, choosing how far to reach into Work IQ before anything runs](docs/visuals/decision-flow.gif)
+
+A question goes to Jev, which decides how far to reach, which record or
+sources to read, and whether the result holds the answer.
+[Open the interactive version](https://hieunhums.github.io/workiq-decision-api/visuals/decision-flow.html).
+
 ## Quick start
 
 Text only is the shortest path: no microphone, no realtime deployment.
@@ -107,6 +113,13 @@ The **Work IQ** picker sets how `ask_workplace` is answered:
 (3.0s of it deciding), Ask 24.7s. In Jev mode, **Compare** (or **Compare
 every question**) runs the other two after the answer, so comparing never
 delays it, and shows their answers next to their times.
+
+![The same question sent three ways at once: Jev, LLM choice and Work IQ ask](docs/visuals/race.gif)
+
+Across 13 questions, each sent all three ways at the same moment, the Jev
+path answered first on 12. Median times: Jev 5.6s, LLM choice 9.3s, Work IQ
+ask 22.3s, which composes a fuller answer.
+[Open the interactive version](https://hieunhums.github.io/workiq-decision-api/visuals/race.html).
 
 The **Auto / Record / Search / Reasoned** picker forces how far a Jev lookup
 reaches. Jev still picks the record or source. The model is never told the
@@ -246,6 +259,7 @@ sign-in registration.
     src/lib/useRealtime.ts      WebRTC, tool dispatch, text mode, meters
     src/app/ui/                 cards, details, path, replay, suggestions
     src/app/api/                session, workplace, web, chat, choices, auth
+    docs/visuals/               README animations and their interactive pages
 
 There is no keyword list and no regex in the routing. Adding a lane means
 describing what it means in `prompts.json`.

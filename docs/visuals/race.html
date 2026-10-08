@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Same question, three ways</title>
+<style>
+  :root { --ink:#0f172a; --sub:#64748b; --line:#e2e8f0;
+          --jev:#7c3aed; --agent:#db2777; --plain:#64748b; --fail:#dc2626; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:24px; background:#fff; color:var(--ink);
+         font:16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+  .mono { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric:tabular-nums; }
+  .card { max-width:1180px; margin:0 auto 28px; border:1px solid var(--line); border-radius:18px; padding:26px 28px;
+          background:linear-gradient(#fbfcfe,#f6f8fb); }
+  .tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+  .tabs button { font:inherit; font-size:15px; border:1px solid var(--line); background:#fff; border-radius:999px;
+                 padding:7px 16px; cursor:pointer; color:#334155; }
+  .tabs button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .qrow { display:flex; justify-content:space-between; align-items:baseline; gap:16px; }
+  h2 { margin:0; font-size:26px; letter-spacing:-.015em; }
+  .clock { font:700 26px ui-monospace, Menlo, monospace; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .clock button { font:500 14px -apple-system, BlinkMacSystemFont, sans-serif; border:1px solid var(--line); background:#fff; border-radius:8px; padding:5px 12px; cursor:pointer; margin-left:10px; vertical-align:4px; }
+  .verdict { min-height:28px; margin:8px 0 14px; display:flex; flex-wrap:wrap; gap:6px 26px; font-size:17px; font-weight:600; }
+  .verdict .win { color:#16a34a; } .verdict .lose { color:#ea580c; }
+  .verdict span { opacity:0; transition:opacity .4s; } .verdict.show span { opacity:1; }
+
+  .race { position:relative; display:grid; grid-template-columns:190px 1fr 130px; column-gap:16px; }
+  .axis { grid-column:2; position:relative; height:22px; color:#94a3b8; font-size:12.5px; }
+  .axis span { position:absolute; transform:translateX(-50%); }
+  .lab { padding:22px 0 0; }
+  .lab b { display:block; font-size:16px; } .lab b i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:8px; vertical-align:1px; }
+  .lab small { display:block; color:var(--sub); font-size:13px; line-height:1.3; margin-top:2px; }
+  .lane { position:relative; height:84px; border-top:1px solid var(--line); }
+  .grid { position:absolute; top:0; bottom:0; width:1px; background:#eef2f7; }
+  .trk { position:absolute; left:0; right:0; top:36px; height:30px; border-radius:8px; background:#eef1f6; }
+  .seg { position:absolute; top:0; height:30px; border-radius:7px; width:0; overflow:hidden; white-space:nowrap;
+         font:700 13px ui-monospace, Menlo, monospace; line-height:30px; padding-left:9px; }
+  .seg.base { top:9px; height:12px; border-radius:6px; padding:0; }
+  .seg.bad { background-image:repeating-linear-gradient(135deg, transparent 0 6px, rgba(220,38,38,.18) 6px 12px) !important; }
+  .above { position:absolute; top:12px; font:700 12px ui-monospace, Menlo, monospace; white-space:nowrap; opacity:0; transition:opacity .3s; }
+  .above.on { opacity:1; }
+  .tick { position:absolute; top:28px; width:1px; height:8px; opacity:0; } .tick.on { opacity:.7; }
+  .end { padding:22px 0 0; border-top:1px solid var(--line); opacity:0; transition:opacity .3s; }
+  .end.on { opacity:1; }
+  .end b { display:block; font:800 22px ui-monospace, Menlo, monospace; }
+  .badge { display:inline-block; font-size:12.5px; font-weight:700; border-radius:999px; padding:1px 9px; }
+  .now { position:absolute; top:22px; bottom:0; width:2px; background:var(--ink); opacity:.55; pointer-events:none; }
+  .now::before { content:""; position:absolute; top:-5px; left:-4px; width:10px; height:10px; border-radius:50%; background:var(--ink); }
+
+  .cols { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:18px; }
+  @media (max-width:900px) { .cols { grid-template-columns:1fr; } .race { grid-template-columns:120px 1fr 90px; } }
+  .col { border-radius:14px; padding:14px 16px 16px; background:#fff; border:1px solid var(--line); border-top:4px solid; }
+  .col h4 { margin:0 0 8px; font-size:15px; }
+  .step { display:grid; grid-template-columns:10px 1fr auto; gap:4px 9px; align-items:baseline; font-size:14px; margin:5px 0; opacity:.3; transition:opacity .3s; }
+  .step.on { opacity:1; }
+  .step i { width:9px; height:9px; border-radius:3px; display:inline-block; }
+  .step .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .step .d { grid-column:2 / 4; color:var(--sub); font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .step.bad .nm, .step.bad .d { color:var(--fail); }
+  .ans { margin-top:12px; border-top:1px solid var(--line); padding-top:10px; font-size:14.5px; white-space:pre-line;
+         opacity:0; transition:opacity .5s; display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
+  .ans.show { opacity:1; }
+  .flag { display:table; background:#f1f5f9; color:#475569; font-weight:600; font-size:13px; border-radius:999px; padding:2px 10px; margin-bottom:6px; }
+  .note { color:var(--sub); font-size:14.5px; margin-top:14px; }
+  h2.s { margin:0 0 6px; } .sub { color:#475569; margin:0 0 22px; }
+  .tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:6px 0 26px; }
+  .tile { border-radius:12px; padding:16px 18px; background:#fff; border:1px solid var(--line); border-left:5px solid; }
+  .tile b { display:block; font:700 36px/1.1 ui-monospace, Menlo, monospace; }
+  .tile span { color:#475569; font-size:15px; }
+  .legend { display:flex; flex-wrap:wrap; gap:22px; color:#475569; font-size:15px; margin-top:16px; }
+  .legend i { display:inline-block; width:14px; height:14px; border-radius:50%; margin-right:8px; vertical-align:-2px; }
+  svg text { font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+</style>
+</head>
+<body>
+<div class="card" id="race">
+  <div class="tabs" id="tabs"></div>
+  <div class="qrow"><h2 id="q"></h2><div class="clock"><span id="clock">0.0s</span><button id="replay">Replay</button></div></div>
+  <div class="verdict" id="verdict"></div>
+  <div class="race" id="lanes"></div>
+  <div class="cols" id="cols"></div>
+  <p class="note">The same question goes down three paths at the same moment, with the same account, the same Work IQ tools and the same model writing.
+  The steps, tool calls and timings are real, from the app&rsquo;s history. Names and answer text are changed. Bars are drawn to scale on one clock. Played at 4x speed.</p>
+</div>
+<div class="card">
+  <h2 class="s">Every side-by-side I ran</h2>
+  <p class="sub" id="summary"></p>
+  <div class="tiles">
+    <div class="tile" style="border-left-color:#7c3aed"><b style="color:#7c3aed" id="m1"></b><span>Jev routed</span></div>
+    <div class="tile" style="border-left-color:#db2777"><b style="color:#db2777" id="m2"></b><span>Model picks its own tools</span></div>
+    <div class="tile" style="border-left-color:#94a3b8"><b style="color:#64748b" id="m3"></b><span>Work IQ ask alone</span></div>
+  </div>
+  <svg id="all" style="width:100%;height:auto" role="img" aria-label="Seconds per question for each approach"></svg>
+  <div class="legend">
+    <span><i style="background:#7c3aed"></i>Jev routed</span>
+    <span><i style="background:#db2777"></i>Model picks its own tools</span>
+    <span><i style="background:#9ca3af"></i>Work IQ ask alone</span>
+  </div>
+  <p class="note">Names are changed. On the bottom row Work IQ ask alone was first, by 10s, with the full meeting summary. Jev looked in search first, saw the summary was not in those results, and passed the question to ask, so it ran both steps. The model picking tools replied sooner with a shorter answer (hollow dot). Three runs where my own test rig hit a one-off hiccup are left out.</p>
+</div>
+
+<script>
+const CASES = [{"q": "What's my latest emails about", "tab": "Latest emails", "lanes": {"routed": {"end": 2.74, "spans": [{"label": "Jev reach", "detail": "chose Record /me/messages?$select=subject,from,receivedDateTime,bodyPreview&$orderby=receivedDateTime%20desc&$top=15 over Reasoned, about 1s instead of 30 to 60s", "stage": "decide", "start": 0.03, "dur": 0.47, "failed": false}, {"label": "fetch \u00b7 Record", "detail": "/me/messages?$select=subject,from,receivedDateTime,bodyPreview&$orderby=receivedDateTime%20desc&$top=15", "stage": "tool", "start": 0.5, "dur": 0.76, "failed": false}, {"label": "Shape reply", "detail": "6734 raw to 4071 shown characters", "stage": "shape", "start": 1.26, "dur": 0.02, "failed": false}, {"label": "gpt-5.4-mini \u00b7 write", "detail": "2103 in, 118 out, first words at 1.19s", "stage": "write", "start": 1.29, "dur": 1.45, "failed": false}], "sub": "Record", "note": "Written from the records in 1.4s", "answer": "Your latest emails are about a cache permissions rollout from Isaiah Langer, a node pool upgrade notice from the platform team, and a follow-up from Megan Bowen on the Northwind check-in.", "flag": ""}, "agent": {"end": 4.82, "spans": [{"label": "gpt-5.4-mini \u00b7 choosing tools", "detail": "1 call(s), 5981 tokens read", "stage": "decide", "start": 0.52, "dur": 4.82, "failed": false}, {"label": "fetch \u00b7 model's choice", "detail": "{\"entityUrls\":[\"/me/messages?$select=subject,from,receivedDateTime,bodyPreview&$top=10\"]}  \u00b7  4070 characters", "stage": "tool", "start": 1.84, "dur": 0.44, "failed": false}], "sub": "1 call(s), 5981 tokens of tool list read", "answer": "Your latest emails are mostly about platform issues, including cache permissions, node pool image upgrades and an operator conflict after an upgrade. There is also a meeting follow-up from Megan Bowen.", "flag": ""}, "plain": {"end": 47.75, "spans": [{"label": "ask", "detail": "the same question, sent straight to Work IQ ask", "stage": "tool", "start": 0.52, "dur": 47.73, "failed": false}, {"label": "Shape reply", "detail": "8460 raw to 2581 shown characters", "stage": "shape", "start": 48.25, "dur": 0.0, "failed": false}], "sub": "the question as asked, straight to ask", "answer": "Several recent emails came through today, across 25 messages processed. The important ones:\n\n1. Cache permissions rollout, from Isaiah Langer. He asks whether\u2026", "flag": ""}}}, {"q": "What documents did I work on recently?", "tab": "Recent documents", "lanes": {"routed": {"end": 3.27, "spans": [{"label": "Jev reach", "detail": "chose Record /me/insights/used?$top=10 over Reasoned, about 1s instead of 30 to 60s, 99% sure", "stage": "decide", "start": 0.05, "dur": 0.3, "failed": false}, {"label": "fetch \u00b7 Record", "detail": "/me/insights/used?$top=10", "stage": "tool", "start": 0.35, "dur": 1.28, "failed": false}, {"label": "Shape reply", "detail": "3158 raw to 3153 shown characters", "stage": "shape", "start": 1.63, "dur": 0.04, "failed": false}, {"label": "gpt-5.4-mini \u00b7 write", "detail": "1291 in, 132 out, first words at 1.34s", "stage": "write", "start": 1.67, "dur": 1.6, "failed": false}], "sub": "Record \u00b7 99% sure", "note": "Written from the records in 1.6s", "answer": "You recently worked on \u201cNorthwind data review\u201d this morning, \u201cContoso Hub roadmap.pptx\u201d last Friday, and \u201cQ3 platform notes.docx\u201d earlier in the week.", "flag": ""}, "agent": {"end": 11.29, "spans": [{"label": "gpt-5.4-mini \u00b7 choosing tools", "detail": "1 call(s), 5214 tokens read", "stage": "decide", "start": 0.37, "dur": 11.29, "failed": false}, {"label": "retrieve \u00b7 model's choice", "detail": "{\"query\":\"documents I worked on recently, recent files I edited or modified\", \"strategy\":\"grounding\"}  \u00b7  4072 characters", "stage": "tool", "start": 2.54, "dur": 7.3, "failed": false}], "sub": "1 call(s), 5214 tokens of tool list read", "answer": "You worked on 3 recent documents: \u201cNorthwind data review\u201d this morning, \u201cContoso Hub roadmap.pptx\u201d last Friday, and one more shared presentation you last modified.", "flag": ""}, "plain": {"end": 22.08, "spans": [{"label": "ask", "detail": "the same question, sent straight to Work IQ ask", "stage": "tool", "start": 0.37, "dur": 22.07, "failed": false}, {"label": "Shape reply", "detail": "9180 raw to 2313 shown characters", "stage": "shape", "start": 22.44, "dur": 0.0, "failed": false}], "sub": "the question as asked, straight to ask", "answer": "I found many file results tied to your recent activity. Filtering to the ones you edited yourself:\n\n1. Northwind data review, edited this morning\u2026", "flag": ""}}}, {"q": "Who is my manager?", "tab": "My manager", "lanes": {"routed": {"end": 2.32, "spans": [{"label": "Jev reach", "detail": "chose Record /me/manager?$select=displayName,jobTitle,department,officeLocation,mail over Reasoned, about 1s instead of 30 to 60s, 95% sure", "stage": "decide", "start": 0.05, "dur": 0.28, "failed": false}, {"label": "fetch \u00b7 Record", "detail": "/me/manager?$select=displayName,jobTitle,department,officeLocation,mail", "stage": "tool", "start": 0.32, "dur": 1.0, "failed": false}, {"label": "Shape reply", "detail": "161 raw to 161 shown characters", "stage": "shape", "start": 1.32, "dur": 0.0, "failed": false}, {"label": "gpt-5.4-mini \u00b7 write", "detail": "445 in, 15 out, first words at 0.94s", "stage": "write", "start": 1.32, "dur": 1.0, "failed": false}], "sub": "Record \u00b7 95% sure", "note": "Written from the records in 1.0s", "answer": "Your manager is Adele Vance, Director of Cloud Solutions, based in Seattle.", "flag": ""}, "agent": {"end": 3.57, "spans": [{"label": "gpt-5.4-mini \u00b7 choosing tools", "detail": "1 call(s), 4327 tokens read", "stage": "decide", "start": 0.34, "dur": 3.57, "failed": false}, {"label": "fetch \u00b7 model's choice", "detail": "{\"entityUrls\":[\"/me/manager?$select=displayName,mail,userPrincipalName\"]}  \u00b7  101 characters", "stage": "tool", "start": 1.79, "dur": 0.58, "failed": false}], "sub": "1 call(s), 4327 tokens of tool list read", "answer": "Your manager is Adele Vance (adele@contoso.com).", "flag": ""}, "plain": {"end": 20.02, "spans": [{"label": "ask", "detail": "the same question, sent straight to Work IQ ask", "stage": "tool", "start": 0.34, "dur": 20.02, "failed": false}, {"label": "Shape reply", "detail": "506 raw to 141 shown characters", "stage": "shape", "start": 20.36, "dur": 0.0, "failed": false}], "sub": "the question as asked, straight to ask", "answer": "Your manager is Adele Vance.", "flag": ""}}}, {"q": "Find my Northwind meeting transcript summary", "tab": "Meeting summary", "lanes": {"routed": {"end": 40.77, "spans": [{"label": "Jev reach", "detail": "chose Search in Meetings, Files, 92% sure of the reach", "stage": "decide", "start": 0.03, "dur": 0.37, "failed": false}, {"label": "retrieve \u00b7 Search", "detail": "find my Northwind meeting transcript summary  \u00b7  Meetings, Files only", "stage": "tool", "start": 0.39, "dur": 7.68, "failed": false}, {"label": "Shape reply", "detail": "20961 raw to 4072 shown characters", "stage": "shape", "start": 8.07, "dur": 0.0, "failed": false}, {"label": "Jev check", "detail": "answered 39%, several candidates 7%, names one thing 94%, handing on", "stage": "decide", "start": 8.08, "dur": 0.34, "failed": false}, {"label": "ask \u00b7 Reasoned", "detail": "the result does not hold what was asked (39%), composing instead", "stage": "tool", "start": 8.42, "dur": 32.34, "failed": false}, {"label": "Shape reply", "detail": "14820 raw to 4071 shown characters", "stage": "shape", "start": 40.76, "dur": 0.0, "failed": false}], "sub": "Search in Meetings, Files, then Reasoned after the check \u00b7 92% sure", "note": "Composed by Work IQ ask", "answer": "I found 2 matching meeting artifacts across 7 file results, including the full transcript and recording. The meeting was Teams: Northwind x Contoso check-in, organized by Megan Bowen on 2 Oct\u2026", "flag": ""}, "agent": {"end": 23.32, "spans": [{"label": "gpt-5.4-mini \u00b7 choosing tools", "detail": "2 call(s), 9736 tokens read", "stage": "decide", "start": 0.4, "dur": 23.32, "failed": false}, {"label": "retrieve \u00b7 model's choice", "detail": "{\"query\":\"Northwind meeting transcript summary\",\"strategy\":\"grounding\",\"capabilities\":[{\"name\":\"Meetings\",\"items_by_id\":[]},{\"name\":\"OneDriveAndSharePoint\",\"items_by_url\":[]},{\"name\":\"Email\",\"fol  \u00b7  4072 characters", "stage": "tool", "start": 2.17, "dur": 8.82, "failed": false}, {"label": "retrieve \u00b7 model's choice", "detail": "{\"query\":\"Northwind meeting transcript summary Teams: Northwind x Contoso check-in transcript summary\",\"strategy\":\"grounding\",\"capabilities\":[{\"name\":\"Meetings\",\"items_by_id\":[]},{\"name\":\"Email\",\"fol  \u00b7  4072 characters", "stage": "tool", "start": 12.98, "dur": 8.65, "failed": false}], "sub": "2 call(s), 9736 tokens of tool list read", "answer": "I found the Northwind follow-up meeting, \u201cTeams: Northwind x Contoso check-in,\u201d but the retrieved result only shows that a transcript is available, not the summary itself. It also points to next steps: an investment review and a deep dive on their data estate.", "flag": "without the summary itself"}, "plain": {"end": 30.58, "spans": [{"label": "ask", "detail": "the same question, sent straight to Work IQ ask", "stage": "tool", "start": 0.4, "dur": 30.58, "failed": false}, {"label": "Shape reply", "detail": "9960 raw to 3412 shown characters", "stage": "shape", "start": 30.98, "dur": 0.0, "failed": false}], "sub": "the question as asked, straight to ask", "answer": "I found the meeting. It was Teams: Northwind x Contoso check-in, organized by Megan Bowen, on October 2, 2026, 9:30 to 10:15 AM. You attended, and the meeting was transcribed.\n\nTL;DR\nThe discussion landed well beyond a generic pitch\u2026", "flag": ""}}}], RUNS = [{"q": "What's my latest chat with Adele?", "routed": 7.95, "agent": 9.88, "plain": 27.0, "agentMiss": ""}, {"q": "That's my latest chat with Adele.", "routed": 11.98, "agent": 13.87, "plain": 20.69, "agentMiss": ""}, {"q": "What's my latest chat with Diego?", "routed": 3.36, "agent": 9.29, "plain": 32.25, "agentMiss": ""}, {"q": "What is in my mailbox?", "routed": 5.56, "agent": 9.07, "plain": 35.41, "agentMiss": ""}, {"q": "What's my latest emails about", "routed": 2.74, "agent": 4.82, "plain": 47.75, "agentMiss": ""}, {"q": "Where is Isaiah's Contoso email?", "routed": 10.41, "agent": 13.4, "plain": 18.73, "agentMiss": ""}, {"q": "Who is my manager?", "routed": 2.32, "agent": 3.57, "plain": 20.02, "agentMiss": ""}, {"q": "Who is Alex Wilber?", "routed": 6.39, "agent": 8.75, "plain": 22.34, "agentMiss": ""}, {"q": "What documents did I work on recently?", "routed": 3.27, "agent": 11.29, "plain": 22.08, "agentMiss": ""}, {"q": "What documents did I work on recently? (again)", "routed": 3.49, "agent": 10.41, "plain": 22.0, "agentMiss": ""}, {"q": "Show me Lee's profile", "routed": 5.32, "agent": 7.07, "plain": 38.51, "agentMiss": ""}, {"q": "Who is Lee?", "routed": 5.68, "agent": 8.89, "plain": 19.84, "agentMiss": ""}, {"q": "Find my Northwind meeting transcript summary", "routed": 40.77, "agent": 23.32, "plain": 30.58, "agentMiss": "short answer"}], MED = {"routed": 5.6, "agent": 9.3, "plain": 22.3}, WINS = 12, N = 13;
+const SPEED = 4;
+const STATIC = new URLSearchParams(location.search).has("static") ||
+               matchMedia("(prefers-reduced-motion: reduce)").matches;
+const NAMES = { routed:"Jev routed", agent:"Model picks tools", plain:"Work IQ ask" };
+const LONG = { agent:"the model picking tools", plain:"Work IQ ask alone" };
+const DOT = { routed:"#7c3aed", agent:"#db2777", plain:"#64748b" };
+const KIND = { reach:"#7c3aed", check:"#7c3aed", fetch:"#0284c7", retrieve:"#0d9488", ask:"#d97706",
+               search_paths:"#0369a1", write:"#16a34a" };
+const KEYS = ["routed","agent","plain"];
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+let C, MAX, timer = null, idx = 0;
+function short(s) {
+  const a = s.label.split(" \u00b7 ")[0];
+  if (a.startsWith("Jev ")) return a.slice(4);
+  if (s.stage === "write") return "write";
+  if (s.stage === "decide") return "thinking";
+  return a;
+}
+const colorOf = (k, s) => s.stage === "decide" && k === "agent" ? DOT.agent : (KIND[short(s)] || "#0369a1");
+const tint = (c, a) => { const n = parseInt(c.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+
+function render(i) {
+  idx = i; C = CASES[i];
+  MAX = Math.max(...Object.values(C.lanes).map(l => l.end));
+  document.querySelectorAll("#tabs button").forEach((b, j) => b.className = j === i ? "on" : "");
+  document.getElementById("q").textContent = C.q;
+  const r = C.lanes.routed;
+  document.getElementById("verdict").innerHTML = ["agent","plain"].map(k => {
+    const o = C.lanes[k].end, win = r.end < o;
+    if (C.lanes[k].flag && !win)
+      return `<span style="color:#64748b">\u25cf ${NAMES[k]} replied ${(r.end - o).toFixed(1)}s sooner, ${C.lanes[k].flag.toLowerCase()}</span>`;
+    const x = (win ? o / r.end : r.end / o).toFixed(1), d = Math.abs(o - r.end).toFixed(1);
+    return win ? `<span class="win">\u26a1 ${x}x faster than ${LONG[k]}, ${d}s saved</span>`
+               : `<span style="color:#64748b">\u25cf ${LONG[k][0].toUpperCase() + LONG[k].slice(1)} was first here, by ${d}s</span>`;
+  }).join("");
+
+  const box = document.getElementById("lanes"); box.innerHTML = "";
+  const step = MAX > 40 ? 10 : MAX > 16 ? 5 : MAX > 6 ? 2 : 1;
+  let ax = `<div></div><div class="axis">`;
+  for (let t = 0; t <= MAX + 1e-6; t += step) ax += `<span style="left:${t / MAX * 100}%">${t}s</span>`;
+  box.innerHTML = ax + `</div><div></div>`;
+  const best = Math.min(...KEYS.filter(k => !C.lanes[k].flag).map(k => C.lanes[k].end));
+  for (const k of KEYS) {
+    const L = C.lanes[k];
+    const lab = document.createElement("div"); lab.className = "lab";
+    lab.innerHTML = `<b style="color:${DOT[k]}"><i style="background:${DOT[k]}"></i>${NAMES[k]}</b><small>${esc(L.sub)}</small>`;
+    const lane = document.createElement("div"); lane.className = "lane";
+    let h = "";
+    for (let t = step; t < MAX; t += step) h += `<div class="grid" style="left:${t / MAX * 100}%"></div>`;
+    h += `<div class="trk"></div>`;
+    lane.innerHTML = h;
+    const trk = lane.querySelector(".trk");
+    L.segs = [];
+    L.spans.forEach(s => {
+      if (s.stage === "shape") return;
+      const dur = Math.max(0, Math.min(s.dur, L.end - s.start)), c = colorOf(k, s), base = s.stage === "decide" && k === "agent";
+      const el = document.createElement("div");
+      el.className = "seg" + (base ? " base" : "") + (s.failed ? " bad" : "");
+      el.style.left = (s.start / MAX * 100) + "%";
+      el.style.background = base ? tint(c, .22) : (short(s) === "reach" || short(s) === "check") ? c : tint(c, .16);
+      if (!base) el.style.boxShadow = `inset 0 0 0 1.3px ${s.failed ? "#dc2626" : tint(c, .75)}`;
+      el.style.color = s.failed ? "#b91c1c" : c;
+      el.title = `${s.label}: ${dur.toFixed(2)}s` + (s.detail ? `\n${s.detail}` : "");
+      trk.appendChild(el);
+      L.segs.push({ s, dur, el, c, base, txt: `${short(s)}  ${s.dur.toFixed(2)}s` + (s.failed ? "  failed" : "") });
+    });
+    const end = document.createElement("div"); end.className = "end";
+    const win = !L.flag && L.end === best;
+    end.innerHTML = `<b style="color:${DOT[k]}">${L.end.toFixed(1)}s</b>` +
+      (L.flag ? `<span class="badge" style="background:#f1f5f9;color:#475569">short answer</span>`
+              : win ? `<span class="badge" style="background:#dcfce7;color:#15803d">first answer</span>` : "");
+    box.append(lab, lane, end);
+    L.lane = lane; L.endEl = end;
+  }
+  const now = document.createElement("div"); now.className = "now"; box.appendChild(now);
+
+  const cols = document.getElementById("cols"); cols.innerHTML = "";
+  for (const k of KEYS) {
+    const L = C.lanes[k], col = document.createElement("div"); col.className = "col"; col.style.borderTopColor = DOT[k];
+    let h = `<h4 style="color:${DOT[k]}">${NAMES[k]}: the steps</h4>`;
+    L.spans.forEach(s => {
+      if (s.stage === "shape") return;
+      h += `<div class="step${s.failed ? " bad" : ""}"><i style="background:${colorOf(k, s)}"></i><span class="nm">${esc(s.label)}</span>
+            <span class="mono">${s.dur.toFixed(2)}s</span><span class="d" title="${esc(s.detail || "")}">${esc(s.detail || "")}</span></div>`;
+    });
+    h += `<div class="ans">${L.flag ? `<span class="flag">${esc(L.flag)}</span>` : ""}${esc(L.answer)}</div>`;
+    col.innerHTML = h; cols.appendChild(col); L.col = col;
+  }
+  layout();
+}
+
+function layout() {
+  const box = document.getElementById("lanes"), lane0 = C.lanes.routed.lane;
+  const W = lane0.clientWidth;
+  for (const k of KEYS) {
+    const L = C.lanes[k];
+    L.lane.querySelectorAll(".above,.tick").forEach(e => e.remove());
+    let last = -1e9;
+    for (const g of L.segs) {
+      g.el.textContent = "";
+      if (g.base) continue;
+      const full = g.dur / MAX * W, tw = g.txt.length * 7.9 + 18;
+      g.inside = tw < full;
+      if (g.inside) { g.el.textContent = g.txt; continue; }
+      const mid = (g.s.start + g.dur / 2) / MAX * W;
+      let x = Math.max(0, Math.min(W - tw + 18, mid - (tw - 18) / 2));
+      if (x < last + 10) x = last + 10;
+      last = x + tw - 18;
+      const a = document.createElement("div"); a.className = "above"; a.style.left = x + "px"; a.style.color = g.s.failed ? "#b91c1c" : g.c; a.textContent = g.txt;
+      const t = document.createElement("div"); t.className = "tick"; t.style.left = mid + "px"; t.style.background = g.c;
+      L.lane.append(a, t); g.ab = a; g.tk = t;
+    }
+  }
+  const r0 = lane0.getBoundingClientRect(), rb = box.getBoundingClientRect();
+  box.dataset.x0 = r0.left - rb.left; box.dataset.w = W;
+}
+
+function draw(t) {
+  document.getElementById("clock").textContent = Math.min(t, MAX).toFixed(1) + "s";
+  for (const k of KEYS) {
+    const L = C.lanes[k], done = t >= L.end - 1e-6;
+    for (const g of L.segs) {
+      const el = Math.max(0, Math.min(t, g.s.start + g.dur) - g.s.start);
+      g.el.style.width = `max(${el > 0 ? 4 : 0}px, ${el / MAX * 100}%)`;
+      g.el.style.visibility = t >= g.s.start ? "visible" : "hidden";
+      if (g.ab) { const on = t >= g.s.start + g.dur; g.ab.classList.toggle("on", on); g.tk.classList.toggle("on", on); }
+    }
+    L.endEl.classList.toggle("on", done);
+    L.col.querySelectorAll(".step").forEach((e, j) => e.classList.toggle("on", t >= L.segs[j].s.start));
+    L.col.querySelector(".ans").classList.toggle("show", done);
+  }
+  const box = document.getElementById("lanes"), now = box.querySelector(".now");
+  now.style.left = (+box.dataset.x0 + Math.min(t, MAX) / MAX * +box.dataset.w - 1) + "px";
+  now.style.opacity = t >= MAX ? 0 : .55;
+  document.getElementById("verdict").classList.toggle("show", t >= MAX);
+}
+let lastT = 0;
+function play() {
+  clearInterval(timer);
+  const t0 = performance.now(); draw(0);
+  timer = setInterval(() => { const t = (performance.now() - t0) / 1000 * SPEED; lastT = t; draw(t); if (t >= MAX) clearInterval(timer); }, 33);
+}
+function show(i) { clearInterval(timer); render(i); STATIC ? draw(1e9) : play(); }
+addEventListener("resize", () => { layout(); draw(STATIC ? 1e9 : lastT); });
+
+const tabs = document.getElementById("tabs");
+CASES.forEach((c, i) => { const b = document.createElement("button"); b.textContent = c.tab; b.onclick = () => show(i); tabs.appendChild(b); });
+document.getElementById("replay").onclick = () => show(idx);
+render(0);
+if (STATIC) draw(1e9);
+else if ("IntersectionObserver" in window) {
+  draw(0);
+  const io = new IntersectionObserver(es => { if (es[0].isIntersecting) { io.disconnect(); play(); } }, { threshold: 0.4 });
+  io.observe(document.getElementById("race"));
+} else play();
+
+document.getElementById("summary").textContent =
+  `${N} questions from my own use, each asked three ways at once. Jev answered first on ${WINS} of ${N}. Median time:`;
+document.getElementById("m1").textContent = MED.routed + "s";
+document.getElementById("m2").textContent = MED.agent + "s";
+document.getElementById("m3").textContent = MED.plain + "s";
+
+const rows = RUNS.slice().sort((a, b) => a.routed - b.routed);
+const svg = document.getElementById("all"), W = 1120, L = 384, R = 20, RH = 38, T = 6;
+const AX = Math.ceil(Math.max(...rows.flatMap(r => [r.routed, r.agent, r.plain])) / 10) * 10;
+const X = s => L + s / AX * (W - L - R), H = T + rows.length * RH + 34;
+svg.setAttribute("height", H); svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+let g = "";
+rows.forEach((r, i) => { if (i % 2 === 0) g += `<rect x="0" y="${T + i * RH}" width="${W}" height="${RH}" rx="6" fill="#f9fafb"/>`; });
+for (let t = 0; t <= AX; t += 10)
+  g += `<line x1="${X(t)}" x2="${X(t)}" y1="${T}" y2="${T + rows.length * RH}" stroke="#e5e7eb"/>
+        <text x="${X(t)}" y="${T + rows.length * RH + 24}" text-anchor="middle" font-size="14" fill="#4b5563">${t}s</text>`;
+rows.forEach((r, i) => {
+  const y = T + i * RH + RH / 2, lost = r.routed > Math.min(r.agentMiss ? 1e9 : r.agent, r.plain);
+  const lo = Math.min(r.routed, r.agent, r.plain), hi = Math.max(r.routed, r.agent, r.plain);
+  g += `<text x="${L - 16}" y="${y + 5}" text-anchor="end" font-size="15" fill="${lost ? "#6b7280" : "#111827"}">${r.q.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</text>
+        <line x1="${X(lo)}" x2="${X(hi)}" y1="${y}" y2="${y}" stroke="#d1d5db" stroke-width="3"/>
+        <circle cx="${X(r.plain)}" cy="${y}" r="8" fill="#9ca3af" stroke="#fff" stroke-width="2"/>
+        ${r.agentMiss ? `<circle cx="${X(r.agent)}" cy="${y}" r="7" fill="#fff" stroke="#db2777" stroke-width="2.5"/>
+        <text x="${X(r.agent)}" y="${y - 12}" text-anchor="middle" font-size="12.5" fill="#be185d">${r.agentMiss}</text>`
+        : `<circle cx="${X(r.agent)}" cy="${y}" r="8" fill="#db2777" stroke="#fff" stroke-width="2"/>`}
+        <circle cx="${X(r.routed)}" cy="${y}" r="9" fill="#7c3aed" stroke="#fff" stroke-width="2"/>`;
+});
+svg.innerHTML = g;
+</script>
+</body>
+</html>
